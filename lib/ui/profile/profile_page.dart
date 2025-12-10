@@ -1,11 +1,42 @@
 import 'package:flutter/material.dart';
 import 'package:fixteck/const/fixtec_btn.dart';
+import 'package:fixteck/bloc/profile_bloc.dart';
+import 'package:fixteck/bloc/profile_event.dart';
+import 'package:fixteck/bloc/profile_state.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:fixteck/ui/widgets/global_loading_widget.dart';
 
-class ProfilePage extends StatelessWidget {
+class ProfilePage extends StatefulWidget {
   const ProfilePage({super.key});
 
+  @override
+  State<ProfilePage> createState() => _ProfilePageState();
+}
+
+class _ProfilePageState extends State<ProfilePage> {
   static const Color _backgroundColor = Color(0xFFF5F6FB);
   static const Color _buttonColor = Color(0xFF003B40); // Approximated dark teal
+
+  final TextEditingController _nameController = TextEditingController();
+  final TextEditingController _emailController = TextEditingController();
+  final TextEditingController _phoneController = TextEditingController();
+  final TextEditingController _addressController = TextEditingController();
+
+  @override
+  void initState() {
+    super.initState();
+    // Fetch profile data when screen loads
+    context.read<ProfileBloc>().add(const FetchProfile());
+  }
+
+  @override
+  void dispose() {
+    _nameController.dispose();
+    _emailController.dispose();
+    _phoneController.dispose();
+    _addressController.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -30,71 +61,123 @@ class ProfilePage extends StatelessWidget {
         ),
       ),
       body: SafeArea(
-        child: Column(
-          children: [
-            Expanded(
-              child: SingleChildScrollView(
-                padding: const EdgeInsets.all(16.0),
+        child: BlocConsumer<ProfileBloc, ProfileState>(
+          listener: (context, state) {
+            if (state is ProfileSuccess) {
+              final customer = state.response.data.customer;
+              _nameController.text = customer.name;
+              _emailController.text = customer.email;
+              _phoneController.text = customer.phone;
+              _addressController.text = customer.address;
+            }
+          },
+          builder: (context, state) {
+            if (state is ProfileLoading || state is ProfileInitial) {
+              return const GlobalLoadingWidget();
+            }
+            
+            if (state is ProfileFailure) {
+              return Center(
                 child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisAlignment: MainAxisAlignment.center,
                   children: [
                     Text(
-                      'Edit profile',
-                      style: textTheme.titleLarge?.copyWith(
-                        fontWeight: FontWeight.bold,
-                        color: Colors.black,
-                      ),
+                      'Error: ${state.message}',
+                      style: const TextStyle(color: Colors.red),
                     ),
-                    const SizedBox(height: 24),
-                    _buildLabel(textTheme, 'Full name'),
-                    const SizedBox(height: 8),
-                    _buildTextField(initialValue: 'Shafi Mohammed'),
                     const SizedBox(height: 16),
-                    _buildLabel(textTheme, 'Email'),
-                    const SizedBox(height: 8),
-                    _buildTextField(initialValue: ''),
-                    const SizedBox(height: 16),
-                    _buildLabel(textTheme, 'Phone number'),
-                    const SizedBox(height: 8),
-                    Row(
-                      children: [
-                        SizedBox(
-                          width: 80,
-                          child: _buildTextField(
-                            initialValue: '+97',
-                            enabled: false,
-                            textAlign: TextAlign.center,
-                          ),
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: _buildTextField(
-                            initialValue: '1234567890',
-                            enabled: false,
-                          ),
-                        ),
-                      ],
+                    ElevatedButton(
+                      onPressed: () {
+                        context.read<ProfileBloc>().add(const FetchProfile());
+                      },
+                      child: const Text('Retry'),
                     ),
                   ],
                 ),
-              ),
-            ),
-            Padding(
-              padding: const EdgeInsets.all(16.0),
-              child: FixtecBtn(
-                onPressed: () {},
-                bgColor: _buttonColor,
-                textColor: Colors.white,
-                child: Text(
-                  'Save information',
-                  style: textTheme.titleMedium?.copyWith(
-                    color: Colors.white,
-                    fontWeight: FontWeight.w600,
+              );
+            }
+
+            return Column(
+              children: [
+                Expanded(
+                  child: SingleChildScrollView(
+                    padding: const EdgeInsets.all(16.0),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Edit profile',
+                          style: textTheme.titleLarge?.copyWith(
+                            fontWeight: FontWeight.bold,
+                            color: Colors.black,
+                          ),
+                        ),
+                        const SizedBox(height: 24),
+                        _buildLabel(textTheme, 'Full name'),
+                        const SizedBox(height: 8),
+                        _buildTextField(
+                          controller: _nameController,
+                          enabled: true,
+                        ),
+                        const SizedBox(height: 16),
+                        _buildLabel(textTheme, 'Email'),
+                        const SizedBox(height: 8),
+                        _buildTextField(
+                          controller: _emailController,
+                          enabled: true,
+                        ),
+                        const SizedBox(height: 16),
+                        _buildLabel(textTheme, 'Phone number'),
+                        const SizedBox(height: 8),
+                        _buildTextField(
+                          controller: _phoneController,
+                          enabled: true,
+                        ),
+                        const SizedBox(height: 16),
+                        _buildLabel(textTheme, 'Address'),
+                        const SizedBox(height: 8),
+                        _buildTextField(
+                          controller: _addressController,
+                          enabled: true,
+                        ),
+                        if (state is ProfileSuccess) ...[
+                          const SizedBox(height: 16),
+                          _buildLabel(textTheme, 'Status'),
+                          const SizedBox(height: 8),
+                          _buildTextField(
+                            initialValue: state.response.data.customer.status ? 'Active' : 'Inactive',
+                            enabled: false,
+                          ),
+                          const SizedBox(height: 16),
+                          _buildLabel(textTheme, 'Member since'),
+                          const SizedBox(height: 8),
+                          _buildTextField(
+                            initialValue: state.response.data.customer.formattedCreatedAt,
+                            enabled: false,
+                          ),
+                        ],
+                      ],
+                    ),
                   ),
                 ),
-              ),
-            ),
-          ],
+                Padding(
+                  padding: const EdgeInsets.all(16.0),
+                  child: FixtecBtn(
+                    onPressed: () {},
+                    bgColor: _buttonColor,
+                    textColor: Colors.white,
+                    child: Text(
+                      'Save information',
+                      style: textTheme.titleMedium?.copyWith(
+                        color: Colors.white,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            );
+          },
         ),
       ),
     );
@@ -111,7 +194,8 @@ class ProfilePage extends StatelessWidget {
   }
 
   Widget _buildTextField({
-    required String initialValue,
+    TextEditingController? controller,
+    String? initialValue,
     bool enabled = true,
     TextAlign textAlign = TextAlign.start,
   }) {
@@ -121,7 +205,8 @@ class ProfilePage extends StatelessWidget {
         borderRadius: BorderRadius.circular(12),
       ),
       child: TextFormField(
-        initialValue: initialValue,
+        controller: controller,
+        initialValue: controller == null ? initialValue : null,
         enabled: enabled,
         textAlign: textAlign,
         style: const TextStyle(

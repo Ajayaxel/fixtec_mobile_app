@@ -1,7 +1,16 @@
 import 'package:fixteck/const/fixtec_btn.dart';
+import 'package:fixteck/const/reward_conatiner.dart';
 import 'package:fixteck/const/themes/app_themes.dart';
+import 'package:fixteck/ui/servicedetails/service_details_screen.dart';
+import 'package:fixteck/ui/wallet/wallet_screen.dart';
+import 'package:fixteck/bloc/wallet_bloc.dart';
+import 'package:fixteck/bloc/profile_bloc.dart';
+import 'package:fixteck/bloc/profile_event.dart';
+import 'package:fixteck/bloc/profile_state.dart';
+import 'package:fixteck/data/repositories/wallet_repository.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'dart:async';
 
 class HomeContent extends StatefulWidget {
@@ -20,6 +29,8 @@ class _HomeContentState extends State<HomeContent> {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _startAutoScroll();
+      // Fetch profile data when screen loads
+      context.read<ProfileBloc>().add(const FetchProfile());
     });
   }
 
@@ -71,36 +82,59 @@ class _HomeContentState extends State<HomeContent> {
               children: [
                 // Address Section
                 Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Text(
-                        'Address',
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 14,
-                          fontWeight: FontWeight.w700,
-                        ),
-                      ),
-                      SizedBox(height: 4),
-                      Text(
-                        '45V48DFG, Lora Street Sharjah, Dubai',
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 14,
-                          fontWeight: FontWeight.bold,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ),
-                    ],
+                  child: BlocBuilder<ProfileBloc, ProfileState>(
+                    builder: (context, state) {
+                      String address = 'Loading...';
+                      if (state is ProfileSuccess) {
+                        address = state.response.data.customer.address;
+                      } else if (state is ProfileFailure) {
+                        address = 'Address not available';
+                      }
+                      
+                      return Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(
+                            'Address',
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 14,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                          SizedBox(height: 4),
+                          Text(
+                            address,
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 14,
+                              fontWeight: FontWeight.bold,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                            maxLines: 2,
+                          ),
+                        ],
+                      );
+                    },
                   ),
                 ),
                 SizedBox(width: 12),
 
                 // Wallet Section
-                Container(
+                GestureDetector(
+                  onTap: () => Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => BlocProvider(
+                        create: (context) => WalletBloc(
+                          walletRepository: context.read<WalletRepository>(),
+                        ),
+                        child: const WalletScreen(),
+                      ),
+                    ),
+                  ),
+                  child: Container(
                   padding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                   decoration: BoxDecoration(
                     color: Color(0xFFF1EDFB), // Light purple color
@@ -126,6 +160,7 @@ class _HomeContentState extends State<HomeContent> {
                     ],
                   ),
                 ),
+                )
               ],
             ),
           ),
@@ -244,147 +279,163 @@ class _HomeContentState extends State<HomeContent> {
                   Row(
                     children: [
                       Expanded(
-                        child: Container(
-                          padding: EdgeInsets.only(left: 10, top: 10),
-                          height: 120,
-                          decoration: BoxDecoration(
-                            color: Colors.white,
-                            border: Border.all(
-                              color: Color(0xffE5E7EB),
-                              width: 1,
+                        child: GestureDetector(
+                          onTap: () => Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => ServiceDetailsScreen(serviceName: 'Plumbing'),
                             ),
-                            borderRadius: BorderRadius.circular(18),
-                            boxShadow: [
-                              BoxShadow(
-                                color: Colors.black.withOpacity(0.03),
-                                blurRadius: 12,
-                                offset: Offset(0, 8),
-                              ),
-                            ],
                           ),
-                          child: Stack(
-                            children: [
-                              Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    "Plumbing",
-                                    style: TextStyle(
-                                      fontSize: 16,
-                                      fontWeight: FontWeight.bold,
-                                      color: Colors.black,
-                                    ),
-                                  ),
-                                  SizedBox(height: 10),
-                                  RichText(
-                                    text: TextSpan(
-                                      children: [
-                                        TextSpan(
-                                          text: "10.3k+",
-                                          style: TextStyle(
-                                            fontSize: 13,
-                                            fontWeight: FontWeight.w700,
-                                            color: Color(0xff02A102),
-                                          ),
-                                        ),
-                                        WidgetSpan(child: SizedBox(width: 4)),
-                                        TextSpan(
-                                          text: "Bookings",
-                                          style: TextStyle(
-                                            fontSize: 13,
-                                            fontWeight: FontWeight.w500,
-                                            color: Color(0xff212529),
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                ],
+                          child: Container(
+                            padding: EdgeInsets.only(left: 10, top: 10),
+                            height: 120,
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              border: Border.all(
+                                color: Color(0xffE5E7EB),
+                                width: 1,
                               ),
-                              Positioned(
-                                bottom: 4,
-                                right: 6,
-                                child: Image.asset(
-                                  "assets/home/Plumbing.png",
-                                  height: 70,
-                                  width: 70,
-                                  fit: BoxFit.cover,
+                              borderRadius: BorderRadius.circular(18),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Colors.black.withOpacity(0.03),
+                                  blurRadius: 12,
+                                  offset: Offset(0, 8),
                                 ),
-                              ),
-                            ],
+                              ],
+                            ),
+                            child: Stack(
+                              children: [
+                                Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      "Plumbing",
+                                      style: TextStyle(
+                                        fontSize: 16,
+                                        fontWeight: FontWeight.bold,
+                                        color: Colors.black,
+                                      ),
+                                    ),
+                                    SizedBox(height: 10),
+                                    RichText(
+                                      text: TextSpan(
+                                        children: [
+                                          TextSpan(
+                                            text: "10.3k+",
+                                            style: TextStyle(
+                                              fontSize: 13,
+                                              fontWeight: FontWeight.w700,
+                                              color: Color(0xff02A102),
+                                            ),
+                                          ),
+                                          WidgetSpan(child: SizedBox(width: 4)),
+                                          TextSpan(
+                                            text: "Bookings",
+                                            style: TextStyle(
+                                              fontSize: 13,
+                                              fontWeight: FontWeight.w500,
+                                              color: Color(0xff212529),
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                Positioned(
+                                  bottom: 4,
+                                  right: 6,
+                                  child: Image.asset(
+                                    "assets/home/Plumbing.png",
+                                    height: 70,
+                                    width: 70,
+                                    fit: BoxFit.cover,
+                                  ),
+                                ),
+                              ],
+                            ),
                           ),
                         ),
                       ),
                       SizedBox(width: 12),
                       Expanded(
-                        child: Container(
-                          padding: EdgeInsets.only(left: 10, top: 10),
-                          height: 120,
-                          decoration: BoxDecoration(
-                            color: Colors.white,
-                            border: Border.all(
-                              color: Color(0xffE5E7EB),
-                              width: 1,
+                        child: GestureDetector(
+                          onTap: () => Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => ServiceDetailsScreen(serviceName: 'Electrical'),
                             ),
-                            borderRadius: BorderRadius.circular(18),
-                            boxShadow: [
-                              BoxShadow(
-                                color: Colors.black.withOpacity(0.03),
-                                blurRadius: 12,
-                                offset: Offset(0, 8),
-                              ),
-                            ],
                           ),
-                          child: Stack(
-                            children: [
-                              Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    "Electrical",
-                                    style: TextStyle(
-                                      fontSize: 16,
-                                      fontWeight: FontWeight.bold,
-                                      color: Colors.black,
-                                    ),
-                                  ),
-                                  SizedBox(height: 10),
-                                  RichText(
-                                    text: TextSpan(
-                                      children: [
-                                        TextSpan(
-                                          text: "10.3k+",
-                                          style: TextStyle(
-                                            fontSize: 13,
-                                            fontWeight: FontWeight.w700,
-                                            color: Color(0xff02A102),
-                                          ),
-                                        ),
-                                        WidgetSpan(child: SizedBox(width: 4)),
-                                        TextSpan(
-                                          text: "Bookings",
-                                          style: TextStyle(
-                                            fontSize: 13,
-                                            fontWeight: FontWeight.w500,
-                                            color: Color(0xff212529),
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                ],
+                          child: Container(
+                            padding: EdgeInsets.only(left: 10, top: 10),
+                            height: 120,
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              border: Border.all(
+                                color: Color(0xffE5E7EB),
+                                width: 1,
                               ),
-                              Positioned(
-                                bottom: 0,
-                                right: 0,
-                                child: Image.asset(
-                                  "assets/home/Electrical.png",
-                                  height: 70,
-                                  width: 70,
-                                  fit: BoxFit.cover,
+                              borderRadius: BorderRadius.circular(18),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Colors.black.withOpacity(0.03),
+                                  blurRadius: 12,
+                                  offset: Offset(0, 8),
                                 ),
-                              ),
-                            ],
+                              ],
+                            ),
+                            child: Stack(
+                              children: [
+                                Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      "Electrical",
+                                      style: TextStyle(
+                                        fontSize: 16,
+                                        fontWeight: FontWeight.bold,
+                                        color: Colors.black,
+                                      ),
+                                    ),
+                                    SizedBox(height: 10),
+                                    RichText(
+                                      text: TextSpan(
+                                        children: [
+                                          TextSpan(
+                                            text: "10.3k+",
+                                            style: TextStyle(
+                                              fontSize: 13,
+                                              fontWeight: FontWeight.w700,
+                                              color: Color(0xff02A102),
+                                            ),
+                                          ),
+                                          WidgetSpan(child: SizedBox(width: 4)),
+                                          TextSpan(
+                                            text: "Bookings",
+                                            style: TextStyle(
+                                              fontSize: 13,
+                                              fontWeight: FontWeight.w500,
+                                              color: Color(0xff212529),
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                Positioned(
+                                  bottom: 0,
+                                  right: 0,
+                                  child: Image.asset(
+                                    "assets/home/Electrical.png",
+                                    height: 70,
+                                    width: 70,
+                                    fit: BoxFit.cover,
+                                  ),
+                                ),
+                              ],
+                            ),
                           ),
                         ),
                       ),
@@ -422,59 +473,7 @@ class _HomeContentState extends State<HomeContent> {
                     ),
                   ),
                   SizedBox(height: 30),
-                  Container(
-                    height: 80,
-                    width: double.infinity,
-                    padding: const EdgeInsets.symmetric(horizontal: 18),
-                    decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(12),
-                      gradient: const LinearGradient(
-                        colors: [Color(0xFF00343D), Color(0xFF29B0C8)],
-                        begin: Alignment.centerLeft,
-                        end: Alignment.centerRight,
-                      ),
-                    ),
-                    child: Row(
-                      children: [
-                        Image.asset(
-                          "assets/home/gift.png",
-                          height: 60,
-                          width: 60,
-                          fit: BoxFit.contain,
-                        ),
-                        const SizedBox(width: 16),
-                        Text(
-                          "Invite & earn you rewards \nLorem Ipsum is simply.",
-                          style: TextStyle(
-                            color: Colors.white,
-                            fontSize: 15,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                        Spacer(),
-                        Container(
-                          height: 44,
-                          width: 44,
-                          decoration: BoxDecoration(
-                            color: Colors.white,
-                            shape: BoxShape.circle,
-                            boxShadow: [
-                              BoxShadow(
-                                color: Colors.black.withOpacity(0.15),
-                                blurRadius: 8,
-                                offset: const Offset(0, 4),
-                              ),
-                            ],
-                          ),
-                          child: const Icon(
-                            Icons.arrow_forward_ios_rounded,
-                            size: 18,
-                            color: Color(0xFF0C4B58),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
+                RewardConatiner()
                 ],
               ),
             ),
@@ -608,42 +607,50 @@ class _HomeContentState extends State<HomeContent> {
           cardWidgets.add(
             SizedBox(
               width: cardWidth,
-              child: Container(
-                height: cardHeight,
-                padding: const EdgeInsets.all(14),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(18),
-                  border: Border.all(color: const Color(0xffE5E7EB)),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withOpacity(0.03),
-                      blurRadius: 12,
-                      offset: const Offset(0, 6),
-                    ),
-                  ],
+              child: GestureDetector(
+                onTap: () => Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => ServiceDetailsScreen(serviceName: service.title),
+                  ),
                 ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text(
-                      service.title,
-                      style: const TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w600,
-                        color: Colors.black,
+                child: Container(
+                  height: cardHeight,
+                  padding: const EdgeInsets.all(14),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(18),
+                    border: Border.all(color: const Color(0xffE5E7EB)),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.03),
+                        blurRadius: 12,
+                        offset: const Offset(0, 6),
                       ),
-                    ),
-                    Align(
-                      alignment: Alignment.bottomRight,
-                      child: Image.asset(
-                        service.assetPath,
-                        width: cardWidth * 0.5,
-                        fit: BoxFit.contain,
+                    ],
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        service.title,
+                        style: const TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w600,
+                          color: Colors.black,
+                        ),
                       ),
-                    ),
-                  ],
+                      Align(
+                        alignment: Alignment.bottomRight,
+                        child: Image.asset(
+                          service.assetPath,
+                          width: cardWidth * 0.5,
+                          fit: BoxFit.contain,
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
               ),
             ),
@@ -854,50 +861,58 @@ class MostBookedServices extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      mainAxisAlignment: MainAxisAlignment.start,
-      children: [
-        SizedBox(height: 20),
-        Image.asset(
-          "assets/home/Container (2).png",
-          height: 145,
-          width: 145,
-          fit: BoxFit.cover,
+    return GestureDetector(
+      onTap: () => Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (context) => ServiceDetailsScreen(serviceName: 'Pest control'),
         ),
-        SizedBox(height: 5),
-        Text(
-          "Pest control (includes\nutensil removal ",
-          style: TextStyle(
-            fontSize: 11,
-            fontWeight: FontWeight.bold,
-            color: Colors.black,
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisAlignment: MainAxisAlignment.start,
+        children: [
+          SizedBox(height: 20),
+          Image.asset(
+            "assets/home/Container (2).png",
+            height: 145,
+            width: 145,
+            fit: BoxFit.cover,
           ),
-        ),
-        SizedBox(height: 5),
-        Row(
-          children: [
-            Icon(Icons.star, color: CupertinoColors.inactiveGray, size: 16),
-            Text(
-              "4.79 (117K)",
-              style: TextStyle(
-                fontSize: 8,
-                fontWeight: FontWeight.bold,
-                color: Color(0xff0F0F0F),
-              ),
+          SizedBox(height: 5),
+          Text(
+            "Pest control (includes\nutensil removal ",
+            style: TextStyle(
+              fontSize: 11,
+              fontWeight: FontWeight.bold,
+              color: Colors.black,
             ),
-          ],
-        ),
-        SizedBox(height: 5),
-        Text(
-          "  ₹1,098 ",
-          style: TextStyle(
-            fontSize: 8,
-            fontWeight: FontWeight.bold,
-            color: Color(0xff0F0F0F),
           ),
-        ),
-      ],
+          SizedBox(height: 5),
+          Row(
+            children: [
+              Icon(Icons.star, color: CupertinoColors.inactiveGray, size: 16),
+              Text(
+                "4.79 (117K)",
+                style: TextStyle(
+                  fontSize: 8,
+                  fontWeight: FontWeight.bold,
+                  color: Color(0xff0F0F0F),
+                ),
+              ),
+            ],
+          ),
+          SizedBox(height: 5),
+          Text(
+            "  ₹1,098 ",
+            style: TextStyle(
+              fontSize: 8,
+              fontWeight: FontWeight.bold,
+              color: Color(0xff0F0F0F),
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

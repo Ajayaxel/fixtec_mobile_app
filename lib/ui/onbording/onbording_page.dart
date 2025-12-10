@@ -1,6 +1,7 @@
 import 'package:fixteck/const/fixtec_btn.dart';
 import 'package:fixteck/const/themes/app_themes.dart';
 import 'package:fixteck/ui/login/login_page.dart';
+import 'package:fixteck/core/storage/storage_service.dart';
 import 'package:flutter/material.dart';
 
 class OnbordingPage extends StatelessWidget {
@@ -99,8 +100,16 @@ class OnbordingPage extends StatelessWidget {
                       SizedBox(height: 40),
                       // Button at the bottom
                       FixtecBtn(
-                        onPressed: () {
-                          Navigator.push(context, MaterialPageRoute(builder: (context) => LoginPage()));
+                        onPressed: () async {
+                          // Mark onboarding as completed
+                          await StorageService.setOnboardingCompleted(true);
+                          // Navigate to login page
+                          if (context.mounted) {
+                            Navigator.pushReplacement(
+                              context,
+                              MaterialPageRoute(builder: (context) => const LoginPage()),
+                            );
+                          }
                         },
                         bgColor: AppThemes.textBtnColor,
                         textColor: AppThemes.bgColor,

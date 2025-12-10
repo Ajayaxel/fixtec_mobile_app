@@ -1,65 +1,125 @@
+import 'package:fixteck/ui/helpandsupport/help_support_screen.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:fixteck/bloc/login_bloc.dart';
+import 'package:fixteck/bloc/login_event.dart';
+import 'package:fixteck/bloc/login_state.dart';
+import 'package:fixteck/bloc/profile_bloc.dart';
+import 'package:fixteck/data/repositories/profile_repository.dart';
 import 'package:fixteck/ui/profile/profile_page.dart';
+import 'package:fixteck/ui/login/login_page.dart';
+import 'package:fixteck/ui/favourites/favourites_screen.dart';
+import 'package:fixteck/ui/blocklist/blocklist_screen.dart';
+import 'package:fixteck/ui/bookings/select_address_page.dart';
+import 'package:fixteck/ui/policies/policies_screen.dart';
+import 'package:fixteck/core/utils/loading_helper.dart';
 
-class AccountPage extends StatelessWidget {
+class AccountPage extends StatefulWidget {
   const AccountPage({super.key});
 
+  @override
+  State<AccountPage> createState() => _AccountPageState();
+}
+
+class _AccountPageState extends State<AccountPage> {
   static const Color _backgroundColor = Color(0xFFF5F6FB);
+
+  @override
+  void initState() {
+    super.initState();
+    // Check authentication when page loads
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      context.read<LoginBloc>().add(const CheckAuthentication());
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
     final textTheme = Theme.of(context).textTheme;
 
-    return Scaffold(
-      backgroundColor: _backgroundColor,
-      appBar: AppBar(
-        backgroundColor: Colors.white,
-        elevation: 0,
-        centerTitle: true,
-        leading: IconButton(
-          onPressed: () => Navigator.of(context).maybePop(),
-          icon: const Icon(Icons.arrow_back_ios_new, color: Colors.black87),
-        ),
-        title: Text(
-          'Settings',
-          style: textTheme.titleMedium?.copyWith(
-            color: Colors.black,
-            fontWeight: FontWeight.w600,
-          ),
-        ),
-      ),
-      body: LayoutBuilder(
-        builder: (context, constraints) {
-          final double horizontalPadding;
-          if (constraints.maxWidth < 480) {
-            horizontalPadding = 16;
-          } else if (constraints.maxWidth < 768) {
-            horizontalPadding = 24;
-          } else {
-            horizontalPadding = 48;
-          }
-
-          return SafeArea(
-            child: SingleChildScrollView(
-              padding: EdgeInsets.fromLTRB(
-                horizontalPadding,
-                24,
-                horizontalPadding,
-                24,
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  _ReferralCard(textTheme: textTheme),
-                  const SizedBox(height: 16),
-                  _SettingsCard(textTheme: textTheme, items: _settingsItems),
-                  const SizedBox(height: 16),
-                  _LogoutButton(textTheme: textTheme),
-                ],
-              ),
+    return BlocListener<LoginBloc, LoginState>(
+      listener: (context, state) {
+        if (state is LogoutLoading) {
+          LoadingHelper.show(context: context, message: 'Logging out...');
+        } else if (state is LogoutSuccess) {
+          LoadingHelper.hide();
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(state.response.message),
+              backgroundColor: Colors.green,
             ),
           );
-        },
+          // Navigate to login page and clear navigation stack
+          Navigator.pushAndRemoveUntil(
+            context,
+            MaterialPageRoute(builder: (context) => const LoginPage()),
+            (route) => false,
+          );
+        } else if (state is LogoutFailure) {
+          LoadingHelper.hide();
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(state.message),
+              backgroundColor: Colors.red,
+            ),
+          );
+        } else if (state is Unauthenticated) {
+          // Unauthenticated state is handled globally in main.dart
+          // But we can show a message here if needed
+          LoadingHelper.hide();
+        }
+      },
+      child: Scaffold(
+        backgroundColor: _backgroundColor,
+        appBar: AppBar(
+          backgroundColor: Colors.white,
+          elevation: 0,
+          centerTitle: true,
+          leading: IconButton(
+            onPressed: () => Navigator.of(context).maybePop(),
+            icon: const Icon(Icons.arrow_back_ios_new, color: Colors.black87),
+          ),
+          title: Text(
+            'Settings',
+            style: textTheme.titleMedium?.copyWith(
+              color: Colors.black,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ),
+        body: LayoutBuilder(
+          builder: (context, constraints) {
+            final double horizontalPadding;
+            if (constraints.maxWidth < 480) {
+              horizontalPadding = 16;
+            } else if (constraints.maxWidth < 768) {
+              horizontalPadding = 24;
+            } else {
+              horizontalPadding = 48;
+            }
+
+            return SafeArea(
+              child: SingleChildScrollView(
+                padding: EdgeInsets.fromLTRB(
+                  horizontalPadding,
+                  24,
+                  horizontalPadding,
+                  24,
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    _ReferralCard(textTheme: textTheme),
+                    const SizedBox(height: 16),
+                    _SettingsCard(textTheme: textTheme, items: _settingsItems),
+                    const SizedBox(height: 16),
+                    _LogoutButton(textTheme: textTheme),
+                  ],
+                ),
+              ),
+            );
+          },
+        ),
       ),
     );
   }
@@ -176,12 +236,56 @@ class _SettingsCard extends StatelessWidget {
               item: items[index],
               isLast: index == items.length - 1,
               onTap: () {
-                if (items[index].title == 'Profile') {
-                  Navigator.of(context).push(
-                    MaterialPageRoute(
-                      builder: (context) => const ProfilePage(),
-                    ),
-                  );
+                final item = items[index];
+                switch (item.title) {
+                  case 'Profile':
+                    Navigator.of(context).push(
+                      MaterialPageRoute(
+                        builder: (context) => BlocProvider(
+                          create: (context) => ProfileBloc(
+                            profileRepository: context.read<ProfileRepository>(),
+                          ),
+                          child: const ProfilePage(),
+                        ),
+                      ),
+                    );
+                    break;
+                  case 'Favourites':
+                    Navigator.of(context).push(
+                      MaterialPageRoute(
+                        builder: (context) => const FavouritesScreen(),
+                      ),
+                    );
+                    break;
+                  case 'Blocklist':
+                    Navigator.of(context).push(
+                      MaterialPageRoute(
+                        builder: (context) => const BlocklistScreen(),
+                      ),
+                    );
+                    break;
+                  case 'Addresses':
+                    Navigator.of(context).push(
+                      MaterialPageRoute(
+                        builder: (context) => const SelectAddressPage(),
+                      ),
+                    );
+                    break;
+                  case 'Policies':
+                    Navigator.of(context).push(
+                      MaterialPageRoute(
+                        builder: (context) => const PoliciesScreen(),
+                      ),
+                    );
+                    break;
+                  case 'Help & support':
+                 
+                    Navigator.of(context).push(
+                      MaterialPageRoute(
+                        builder: (context) => const HelpSupportScreen(),
+                      ),
+                    );
+                    break;
                 }
               },
             ),
@@ -216,13 +320,14 @@ class _SettingsTile extends StatelessWidget {
             child: Row(
               children: [
                 Container(
-                  width: 44,
-                  height: 44,
-                  decoration: BoxDecoration(
-                    color: item.iconBackground,
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: Icon(item.icon, color: Colors.white),
+                  width: 28,
+                  height: 28,
+                  child: item.imagePath != null
+                      ? Image.asset(
+                          item.imagePath!,
+                          fit: BoxFit.contain,
+                        )
+                      : Icon(item.icon, color: Colors.black87),
                 ),
                 const SizedBox(width: 16),
                 Expanded(
@@ -267,82 +372,85 @@ class _LogoutButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Align(
-      alignment: Alignment.center,
-      child: SizedBox(
-        width: 180,
-        child: OutlinedButton(
-          style: OutlinedButton.styleFrom(
-            backgroundColor: Colors.white,
-            side: const BorderSide(color: Colors.black26),
-            padding: const EdgeInsets.symmetric(vertical: 14),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(14),
+    return BlocBuilder<LoginBloc, LoginState>(
+      builder: (context, state) {
+        final isLoading = state is LogoutLoading;
+        return Align(
+          alignment: Alignment.center,
+          child: SizedBox(
+            width: 180,
+            child: OutlinedButton(
+              style: OutlinedButton.styleFrom(
+                backgroundColor: Colors.white,
+                side: const BorderSide(color: Colors.black26),
+                padding: const EdgeInsets.symmetric(vertical: 14),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(14),
+                ),
+              ),
+              onPressed: isLoading
+                  ? null
+                  : () {
+                      context.read<LoginBloc>().add(const LogoutRequested());
+                    },
+              child: Text(
+                'Log out',
+                style: textTheme.titleMedium?.copyWith(
+                  fontWeight: FontWeight.w600,
+                  color: Colors.black,
+                ),
+              ),
             ),
           ),
-          onPressed: () {},
-          child: Text(
-            'Log out',
-            style: textTheme.titleMedium?.copyWith(
-              fontWeight: FontWeight.w600,
-              color: Colors.black,
-            ),
-          ),
-        ),
-      ),
+        );
+      },
     );
   }
 }
 
 class _SettingItem {
   const _SettingItem({
-    required this.icon,
+    this.icon,
+    this.imagePath,
     required this.title,
     required this.subtitle,
-    required this.iconBackground,
-  });
+  }) : assert(icon != null || imagePath != null, 'Either icon or imagePath must be provided');
 
-  final IconData icon;
+  final IconData? icon;
+  final String? imagePath;
   final String title;
   final String subtitle;
-  final Color iconBackground;
 }
 
 const List<_SettingItem> _settingsItems = [
   _SettingItem(
-    icon: Icons.person_outline,
+    imagePath: 'assets/account/tdesign_user-circle-filled.png',
     title: 'Profile',
     subtitle: 'Update personal information',
-    iconBackground: Color(0xFF5C8BFF),
   ),
   _SettingItem(
-    icon: Icons.favorite,
+    imagePath: 'assets/account/emojione-v1_crown (1).png',
     title: 'Favourites',
     subtitle: 'Manage your favourite experts',
-    iconBackground: Color(0xFFFFC857),
   ),
   _SettingItem(
-    icon: Icons.block,
+    imagePath: 'assets/account/fluent_presence-blocked-16-regular.png',
     title: 'Blocklist',
     subtitle: 'Manage your blocked experts',
-    iconBackground: Color(0xFFFF7B7B),
   ),
   _SettingItem(
-    icon: Icons.home_outlined,
+    imagePath: 'assets/account/fluent-color_home-48.png',
     title: 'Addresses',
     subtitle: 'Manage saved addresses',
-    iconBackground: Color(0xFFFFB16C),
   ),
   _SettingItem(
-    icon: Icons.article_outlined,
+    imagePath: 'assets/account/lets-icons_file-dock-fill.png',
     title: 'Policies',
     subtitle: 'Terms of us, Privacy policy and others',
-    iconBackground: Color(0xFF6FC2FF),
   ),
   _SettingItem(
-    icon: Icons.help_outline,
+    imagePath: "assets/account/Group.png",
     title: 'Help & support',
     subtitle: 'Reach out to us in case you have a question',
-    iconBackground: Color(0xFF8A9EFF),
   ),
 ];

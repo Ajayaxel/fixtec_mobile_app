@@ -2,7 +2,10 @@ import 'package:fixteck/ui/bottom_nav/bottom_nav_bar.dart';
 import 'package:fixteck/ui/home/home_page.dart';
 import 'package:fixteck/ui/bookings/bookings_page.dart';
 import 'package:fixteck/ui/account/account_page.dart';
+import 'package:fixteck/bloc/profile_bloc.dart';
+import 'package:fixteck/data/repositories/profile_repository.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -32,7 +35,12 @@ class _HomePageState extends State<HomePage> {
   Widget _getCurrentPage() {
     switch (_currentIndex) {
       case 0:
-        return const HomeContent();
+        return BlocProvider(
+          create: (context) => ProfileBloc(
+            profileRepository: context.read<ProfileRepository>(),
+          ),
+          child: const HomeContent(),
+        );
       case 1:
         return const BookingsPage();
       case 2:

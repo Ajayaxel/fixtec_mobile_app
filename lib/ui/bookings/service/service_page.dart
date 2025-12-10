@@ -1,10 +1,83 @@
 import 'package:fixteck/const/fixtec_btn.dart';
 import 'package:fixteck/const/themes/app_themes.dart';
+import 'package:fixteck/ui/bookingconfirm/booking_confrim_screen.dart';
 import 'package:fixteck/ui/bookings/select_address_page.dart';
+import 'package:fixteck/ui/bookings/select_date_time_page.dart';
+import 'package:fixteck/ui/widgets/promo_card.dart';
 import 'package:flutter/material.dart';
 
-class ServicePage extends StatelessWidget {
+class ServicePage extends StatefulWidget {
   const ServicePage({super.key});
+
+  @override
+  State<ServicePage> createState() => _ServicePageState();
+}
+
+class _ServicePageState extends State<ServicePage> {
+  DateTime? _selectedDateTime;
+  String _addressName = 'Shafi Muhammed';
+  String _buildingName = 'Roohi Villas';
+  String _fullAddress = 'CC-18/1375, Jalal Nagar, Karama 234561, Dubai';
+  String _phoneNumber = '11223344556';
+
+  String _formatDateTime(DateTime dateTime) {
+    const months = [
+      'Jan',
+      'Feb',
+      'Mar',
+      'Apr',
+      'May',
+      'Jun',
+      'Jul',
+      'Aug',
+      'Sep',
+      'Oct',
+      'Nov',
+      'Dec'
+    ];
+    const weekdays = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+
+    final day = dateTime.day.toString().padLeft(2, '0');
+    final month = months[dateTime.month - 1];
+    final year = dateTime.year;
+    final weekday = weekdays[dateTime.weekday - 1];
+    
+    int hour = dateTime.hour;
+    final minute = dateTime.minute.toString().padLeft(2, '0');
+    final period = hour >= 12 ? 'PM' : 'AM';
+    
+    if (hour == 0) {
+      hour = 12;
+    } else if (hour > 12) {
+      hour -= 12;
+    }
+    
+    final hourStr = hour.toString().padLeft(2, '0');
+    
+    return '$day $month $year, $weekday $hourStr:$minute $period';
+  }
+
+  String _formatTime(DateTime dateTime) {
+    int hour = dateTime.hour;
+    final minute = dateTime.minute.toString().padLeft(2, '0');
+    final period = hour >= 12 ? 'PM' : 'AM';
+    
+    if (hour == 0) {
+      hour = 12;
+    } else if (hour > 12) {
+      hour -= 12;
+    }
+    
+    final hourStr = hour.toString().padLeft(2, '0');
+    return '$hourStr:$minute $period';
+  }
+
+  String get _displayDateTime {
+    if (_selectedDateTime != null) {
+      return _formatDateTime(_selectedDateTime!);
+    }
+    return '27 Oct 2025, Mon 03:45 PM'; // Default value
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -132,9 +205,9 @@ class ServicePage extends StatelessWidget {
                   // Promotional Cards
                   Row(
                     children: [
-                      _buildPromoCard('Save 10% on every order'),
+                      PromoCard(text: 'Save 10% on every order'),
                       const SizedBox(width: 12),
-                      _buildPromoCard('Save 10% on every order'),
+                      PromoCard(text: 'Save 10% on every order'),
                     ],
                   ),
                   const SizedBox(height: 30),
@@ -151,27 +224,44 @@ class ServicePage extends StatelessWidget {
                     ),
                   ),
                   const SizedBox(height: 12),
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 16,
-                      vertical: 12,
-                    ),
-                    decoration: BoxDecoration(
-                      border: Border.all(color: Colors.grey[300]!),
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Text(
-                          '27 Oct 2025, Mon 03:45 PM',
-                          style: TextStyle(
-                            fontSize: 16,
-                            color: Colors.black,
-                            fontWeight: FontWeight.bold,
+                  GestureDetector(
+                    onTap: () async {
+                      final result = await Navigator.push<Map<String, dynamic>>(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => SelectDateAndTimePage(
+                            initialDate: _selectedDateTime,
                           ),
                         ),
-                      ],
+                      );
+                      if (result != null) {
+                        setState(() {
+                          _selectedDateTime = result['dateTime'] as DateTime;
+                        });
+                      }
+                    },
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 12,
+                      ),
+                      decoration: BoxDecoration(
+                        border: Border.all(color: Colors.grey[300]!),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Text(
+                            _displayDateTime,
+                            style: TextStyle(
+                              fontSize: 16,
+                              color: Colors.black,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
                   ),
                   const SizedBox(height: 24),
@@ -207,14 +297,14 @@ class ServicePage extends StatelessWidget {
                           ),
                         ),
                         const SizedBox(width: 12),
-                        const Expanded(
+                        Expanded(
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.center,
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: [
                               Text(
-                                'Shafi Muhammed\nRoohi Villas\nCC-18/1375, Jalal Nagar, Karama 234561, Dubai  11223344556',
-                                style: TextStyle(
+                                '$_addressName\n$_buildingName\n$_fullAddress  $_phoneNumber',
+                                style: const TextStyle(
                                   fontSize: 14,
                                   fontWeight: FontWeight.w600,
                                 ),
@@ -223,13 +313,22 @@ class ServicePage extends StatelessWidget {
                           ),
                         ),
                         GestureDetector(
-                          onTap: () {
-                            Navigator.push(
+                          onTap: () async {
+                            final result = await Navigator.push(
                               context,
                               MaterialPageRoute(
                                 builder: (context) => const SelectAddressPage(),
                               ),
                             );
+                            // Update address if returned from SelectAddressPage
+                            if (result != null && result is Map<String, dynamic>) {
+                              setState(() {
+                                _addressName = result['name'] ?? _addressName;
+                                _buildingName = result['building'] ?? _buildingName;
+                                _fullAddress = result['address'] ?? _fullAddress;
+                                _phoneNumber = result['phone'] ?? _phoneNumber;
+                              });
+                            }
                           },
                           child: Container(
                             padding: const EdgeInsets.all(8),
@@ -312,47 +411,37 @@ class ServicePage extends StatelessWidget {
       floatingActionButton: Padding(
         padding: const EdgeInsets.only(left: 16, right: 16),
         child: FixtecBtn(
-          onPressed: () {},
+          onPressed: () {
+            // Calculate time range for display
+            String? timeRange;
+            if (_selectedDateTime != null) {
+              final startTime = _formatTime(_selectedDateTime!);
+              final endDateTime = _selectedDateTime!.add(const Duration(hours: 2));
+              final endTime = _formatTime(endDateTime);
+              timeRange = '$startTime - $endTime';
+            }
+            
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) => BookingConfrimScreen(
+                  serviceName: 'Plumbing',
+                  serviceType: 'PLUMBER',
+                  scheduledDate: _selectedDateTime,
+                  scheduledTime: timeRange,
+                  addressName: _addressName,
+                  buildingName: _buildingName,
+                  fullAddress: _fullAddress,
+                  phoneNumber: _phoneNumber,
+                  serviceInformation: 'Plumbing',
+                ),
+              ),
+            );
+          },
           bgColor: AppThemes.bgBtnColor,
           textColor: AppThemes.textBtnColor,
           child: const Text("Continue Booking"),
         ),
-      ),
-    );
-  }
-
-  Widget _buildPromoCard(String text) {
-    return Container(
-      padding: const EdgeInsets.all(10),
-      decoration: BoxDecoration(
-        border: Border.all(color: Color(0xff9C9C9C)),
-        borderRadius: BorderRadius.circular(8),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Icon(Icons.local_offer, color: Colors.purple[700], size: 18),
-              const SizedBox(width: 6),
-              Text(
-                text,
-                style: const TextStyle(
-                  fontSize: 11,
-                  fontWeight: FontWeight.w700,
-                ),
-              ),
-            ],
-          ),
-
-          Padding(
-            padding: const EdgeInsets.only(top: 2, left: 20),
-            child: Text(
-              'Get Plus now',
-              style: TextStyle(fontSize: 11, color: Colors.grey[600]),
-            ),
-          ),
-        ],
       ),
     );
   }

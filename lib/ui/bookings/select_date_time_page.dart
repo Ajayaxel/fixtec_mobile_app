@@ -1,18 +1,22 @@
 import 'package:date_picker_timeline/date_picker_timeline.dart';
 import 'package:fixteck/const/fixtec_btn.dart';
 import 'package:fixteck/const/themes/app_themes.dart';
-import 'package:fixteck/ui/bookings/service/service_page.dart';
 import 'package:flutter/material.dart';
 
 class SelectDateAndTimePage extends StatefulWidget {
-  const SelectDateAndTimePage({super.key});
+  final DateTime? initialDate;
+
+  const SelectDateAndTimePage({
+    super.key,
+    this.initialDate,
+  });
 
   @override
   State<SelectDateAndTimePage> createState() => _SelectDateAndTimePageState();
 }
 
 class _SelectDateAndTimePageState extends State<SelectDateAndTimePage> {
-  DateTime _selectedDate = DateTime.now();
+  late DateTime _selectedDate;
   int _selectedTimeSlotIndex = 0;
 
   final List<String> _timeSlots = [
@@ -20,6 +24,47 @@ class _SelectDateAndTimePageState extends State<SelectDateAndTimePage> {
     '04:00 PM\n06:00 PM',
     '06:00 PM\n08:00 PM',
   ];
+
+  @override
+  void initState() {
+    super.initState();
+    if (widget.initialDate != null) {
+      _selectedDate = DateTime(
+        widget.initialDate!.year,
+        widget.initialDate!.month,
+        widget.initialDate!.day,
+      );
+    } else {
+      _selectedDate = DateTime.now();
+    }
+  }
+
+  DateTime _getSelectedDateTime() {
+    // Parse the time slot to get the start time
+    final timeSlot = _timeSlots[_selectedTimeSlotIndex];
+    final startTimeStr = timeSlot.split('\n')[0]; // Get "02:00 PM"
+    
+    // Parse the time
+    final timeParts = startTimeStr.split(' ');
+    final timeValue = timeParts[0].split(':');
+    int hour = int.parse(timeValue[0]);
+    final minute = int.parse(timeValue[1]);
+    final period = timeParts[1];
+    
+    if (period == 'PM' && hour != 12) {
+      hour += 12;
+    } else if (period == 'AM' && hour == 12) {
+      hour = 0;
+    }
+    
+    return DateTime(
+      _selectedDate.year,
+      _selectedDate.month,
+      _selectedDate.day,
+      hour,
+      minute,
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -54,13 +99,14 @@ class _SelectDateAndTimePageState extends State<SelectDateAndTimePage> {
         padding: const EdgeInsets.only(left: 16, right: 16, bottom: 30),
         child: FixtecBtn(
           onPressed: () {
-            Navigator.of(context).push(
-              MaterialPageRoute(builder: (context) => const ServicePage()),
-            );
+            final selectedDateTime = _getSelectedDateTime();
+            Navigator.of(context).pop({
+              'dateTime': selectedDateTime,
+            });
           },
           bgColor: AppThemes.bgBtnColor,
           textColor: AppThemes.textBtnColor,
-          child: const Text("Reschedule"),
+          child: const Text("Confirm"),
         ),
       ),
     );

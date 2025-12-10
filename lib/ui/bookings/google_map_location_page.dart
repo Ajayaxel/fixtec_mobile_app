@@ -4,6 +4,7 @@ import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:geocoding/geocoding.dart';
 import 'package:fixteck/const/themes/app_themes.dart';
+import 'package:fixteck/ui/widgets/global_loading_widget.dart';
 
 class GoogleMapLocationPage extends StatefulWidget {
   const GoogleMapLocationPage({super.key});
@@ -290,16 +291,7 @@ class _GoogleMapLocationPageState extends State<GoogleMapLocationPage> {
                   if (_isGettingAddress)
                     Row(
                       children: [
-                        SizedBox(
-                          width: 16,
-                          height: 16,
-                          child: CircularProgressIndicator(
-                            strokeWidth: 2,
-                            valueColor: AlwaysStoppedAnimation<Color>(
-                              AppThemes.bgColor,
-                            ),
-                          ),
-                        ),
+                        const GlobalLoadingIndicator(size: 16),
                         const SizedBox(width: 12),
                         const Text(
                           'Getting address...',
@@ -339,30 +331,7 @@ class _GoogleMapLocationPageState extends State<GoogleMapLocationPage> {
 
           // Loading Overlay
           if (_isLoading)
-            Container(
-              color: Colors.white,
-              child: Center(
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    CircularProgressIndicator(
-                      valueColor: AlwaysStoppedAnimation<Color>(
-                        AppThemes.bgColor,
-                      ),
-                    ),
-                    const SizedBox(height: 16),
-                    const Text(
-                      'Getting your location...',
-                      style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w500,
-                        color: Colors.grey,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
+            const GlobalLoadingWidget(),
         ],
       ),
     );
